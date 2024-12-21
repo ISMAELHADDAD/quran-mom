@@ -2,10 +2,12 @@ package com.ismaelhaddad.quranmom
 
 import android.content.Context
 import android.os.Bundle
-import android.util.AttributeSet
 import android.view.Menu
-import android.view.View
+import android.widget.ProgressBar
 import android.widget.TextView
+import android.widget.Toast
+import android.widget.Toast.LENGTH_LONG
+import androidx.appcompat.app.AlertDialog
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.navigation.NavigationView
 import androidx.navigation.findNavController
@@ -20,13 +22,10 @@ import androidx.lifecycle.asLiveData
 import com.ismaelhaddad.quranmom.databinding.ActivityMainBinding
 import com.ismaelhaddad.quranmom.model.Reciter
 import com.ismaelhaddad.quranmom.service.DatabaseService
-import com.ismaelhaddad.quranmom.viewmodel.ReciterViewModel
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import com.ismaelhaddad.quranmom.viewmodel.ReciterSurahAudioViewModel
 
 // Total time: 16h
-// TODO: Check if the audio are there. If not, download it. (3h)
+// DONE: Check if the audio are there. If not, download it. (3h)
 // TODO: Drawer: Dropdown for reciters (2h)
 // TODO: Drawer: List surahs (1h)
 // TODO: Page fragment: List ayahs + font (3h)
@@ -35,12 +34,19 @@ import kotlinx.coroutines.launch
 // TODO: Page fragment: Tap word to play only that word (1h)
 // TODO: Page fragment: Swipe left for continuous playing starting from that word (1h)
 
+const val QURANMOM_PREFERENCES = "QuranMomPreferences"
+const val QURANMOM_PREFERENCES_IS_FIRST_TIME = "isFirstTime"
+const val QURANMOM_AUDIO_DIR = "audio"
+
 class MainActivity : AppCompatActivity() {
 
     private lateinit var appBarConfiguration: AppBarConfiguration
     private lateinit var binding: ActivityMainBinding
 
-    private lateinit var reciterViewModel: ReciterViewModel
+    private lateinit var reciterSurahAudioViewModel: ReciterSurahAudioViewModel
+    private lateinit var progressDialog: AlertDialog
+    private lateinit var progressBar: ProgressBar
+    private lateinit var progressText: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -51,24 +57,32 @@ class MainActivity : AppCompatActivity() {
         setSupportActionBar(binding.appBarMain.toolbar)
 
         val databaseService = DatabaseService.getDatabase(applicationContext)
-        reciterViewModel = ViewModelProvider(this, ReciterViewModel.Factory(databaseService))[ReciterViewModel::class.java]
+        reciterSurahAudioViewModel = ViewModelProvider(this, ReciterSurahAudioViewModel.Factory(databaseService))[ReciterSurahAudioViewModel::class.java]
 
-        reciterViewModel.reciters.asLiveData().observe(this) { reciters: List<Reciter> ->
+        val sharedPreferences = applicationContext.getSharedPreferences(QURANMOM_PREFERENCES, Context.MODE_PRIVATE)
+        val isFirstTime = sharedPreferences.getBoolean(QURANMOM_PREFERENCES_IS_FIRST_TIME, true)
+
+        if (isFirstTime) {
+            // Show a progress dialog if it's the first launch
+            showProgressDialog()
+
+            // Set the flag so it won't show again
+            sharedPreferences.edit().putBoolean(QURANMOM_PREFERENCES_IS_FIRST_TIME, false).apply()
+
+            // Start the download process
+            reciterSurahAudioViewModel.checkAndDownloadAudios(this) { progress, total ->
+                updateProgress(progress, total)
+                if (progress == total) {
+                    progressDialog.dismiss()
+                }
+            }
+        }
+
+        reciterSurahAudioViewModel.reciters.asLiveData().observe(this) { reciters: List<Reciter> ->
             val reciterName = reciters[1].name
             val homeTextView = findViewById<TextView>(R.id.text_home)
             homeTextView.text = reciterName
         }
-
-//        val databaseService = DatabaseService.getDatabase(applicationContext)
-//
-//        // Perform database operations
-//        CoroutineScope(Dispatchers.IO).launch {
-//            val reciterDao = databaseService.reciterDao()
-//            val reciters: List<Reciter> = reciterDao.getAll()
-//            val reciterName = reciters[0].name
-//            val homeTextView = findViewById<TextView>(R.id.text_home)
-//            homeTextView.text = reciterName
-//        }
 
         binding.appBarMain.fab.setOnClickListener { view ->
             Snackbar.make(view, "Do something", Snackbar.LENGTH_LONG)
@@ -101,4 +115,22 @@ class MainActivity : AppCompatActivity() {
         return navController.navigateUp(appBarConfiguration) || super.onSupportNavigateUp()
     }
 
+    private fun showProgressDialog() {
+        val dialogBuilder = AlertDialog.Builder(this)
+        val dialogView = layoutInflater.inflate(R.layout.dialog_progress, null)
+        progressBar = dialogView.findViewById(R.id.progressBar)
+        progressText = dialogView.findViewById(R.id.progressText)
+
+        dialogBuilder.setView(dialogView)
+            .setCancelable(false)
+
+        progressDialog = dialogBuilder.create()
+        progressDialog.show()
+    }
+
+    private fun updateProgress(progress: Int, total: Int) {
+        progressBar.max = total
+        progressBar.progress = progress
+        progressText.text = "Descargando ($progress/$total) surahs"
+    }
 }

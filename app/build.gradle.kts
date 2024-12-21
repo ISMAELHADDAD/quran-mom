@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     id("com.google.devtools.ksp")
+    id("androidx.room")
 }
 
 android {
@@ -36,6 +37,10 @@ android {
     }
     buildFeatures {
         viewBinding = true
+    }
+
+    room {
+        schemaDirectory("$projectDir/schemas")
     }
 }
 

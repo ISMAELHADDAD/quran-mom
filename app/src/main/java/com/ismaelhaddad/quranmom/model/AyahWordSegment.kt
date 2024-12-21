@@ -2,9 +2,27 @@ package com.ismaelhaddad.quranmom.model
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.ForeignKey
 import androidx.room.PrimaryKey
 
-@Entity
+@Entity(tableName = "ayah_word_segment",
+    foreignKeys = [
+        ForeignKey(
+            entity = SurahAudio::class,
+            parentColumns = ["id"],
+            childColumns = ["surah_audio_id"],
+            onDelete = ForeignKey.NO_ACTION,
+            onUpdate = ForeignKey.NO_ACTION
+        ),
+        ForeignKey(
+            entity = AyahWord::class,
+            parentColumns = ["id"],
+            childColumns = ["ayah_word_id"],
+            onDelete = ForeignKey.NO_ACTION,
+            onUpdate = ForeignKey.NO_ACTION
+        )
+    ]
+)
 data class AyahWordSegment(
     @PrimaryKey val id: Int,
     @ColumnInfo(name = "surah_audio_id") val surahAudioId: Int,
