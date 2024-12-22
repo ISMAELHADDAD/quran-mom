@@ -1,12 +1,11 @@
-package com.ismaelhaddad.quranmom.viewmodel
+package com.ismaelhaddad.quranmom
 
 import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.ismaelhaddad.quranmom.QURANMOM_AUDIO_DIR
-import com.ismaelhaddad.quranmom.model.Reciter
+import com.ismaelhaddad.quranmom.model.Surah
 import com.ismaelhaddad.quranmom.service.AppDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -15,16 +14,16 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.net.URL
 
-class ReciterSurahAudioViewModel(private val database: AppDatabase) : ViewModel() {
+class MainActivityViewModel(private val database: AppDatabase) : ViewModel() {
 
-    val reciters: Flow<List<Reciter>> = database.reciterDao().getAll()
+    val surahs: Flow<List<Surah>> = database.surahDao().getAll()
 
     // Factory to create the ViewModel with the database dependency
     class Factory(private val database: AppDatabase) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            if (modelClass.isAssignableFrom(ReciterSurahAudioViewModel::class.java)) {
-                return ReciterSurahAudioViewModel(database) as T
+            if (modelClass.isAssignableFrom(MainActivityViewModel::class.java)) {
+                return MainActivityViewModel(database) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }
