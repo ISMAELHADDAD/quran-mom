@@ -8,14 +8,15 @@
 
   <ScrollView
       android:layout_width="match_parent"
-      android:layout_height="match_parent"
-      android:padding="16dp">
-    <TextView
-        android:id="@+id/pageTextView"
+      android:layout_height="match_parent">
+
+    <LinearLayout
+        android:id="@+id/ayahContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Surah Name"
-        android:textSize="20sp" />
+        android:orientation="vertical"
+        android:paddingBottom="80dp"/>
+
   </ScrollView>
 
   <com.google.android.material.floatingactionbutton.FloatingActionButton

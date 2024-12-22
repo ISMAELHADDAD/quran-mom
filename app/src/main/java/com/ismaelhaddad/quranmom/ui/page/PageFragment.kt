@@ -1,23 +1,34 @@
 package com.ismaelhaddad.quranmom.ui.page
 
+import android.annotation.SuppressLint
 import android.content.Context
+import android.graphics.Color
+import android.graphics.Typeface
 import android.os.Bundle
+import android.view.GestureDetector
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageButton
+import android.widget.LinearLayout
 import android.widget.PopupMenu
+import android.widget.TextView
 import android.widget.Toast
+import androidx.core.content.res.ResourcesCompat
+import androidx.core.view.marginBottom
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import com.google.android.flexbox.FlexDirection
+import com.google.android.flexbox.FlexWrap
+import com.google.android.flexbox.FlexboxLayout
 import com.ismaelhaddad.quranmom.QURANMOM_PREFERENCES
 import com.ismaelhaddad.quranmom.QURANMOM_PREFERRED_RECITER_ID
 import com.ismaelhaddad.quranmom.R
 import com.ismaelhaddad.quranmom.databinding.FragmentPageBinding
 import com.ismaelhaddad.quranmom.model.Reciter
-import com.ismaelhaddad.quranmom.service.DatabaseService
+import com.ismaelhaddad.quranmom.database.DatabaseManager
 import kotlinx.coroutines.launch
 
 class PageFragment : Fragment() {
@@ -27,6 +38,7 @@ class PageFragment : Fragment() {
 
     private lateinit var pageViewModel: PageViewModel
 
+    @SuppressLint("ClickableViewAccessibility")
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -35,8 +47,8 @@ class PageFragment : Fragment() {
         _binding = FragmentPageBinding.inflate(inflater, container, false)
         val root: View = binding.root
 
-        val databaseService = DatabaseService.getDatabase(requireContext().applicationContext)
-        pageViewModel = ViewModelProvider(this, PageViewModel.Factory(databaseService))[PageViewModel::class.java]
+        val database = DatabaseManager.getDatabase(requireContext().applicationContext)
+        pageViewModel = ViewModelProvider(this, PageViewModel.Factory(database))[PageViewModel::class.java]
 
         pageViewModel.setSelectedSurahNumber(arguments?.getInt("surahNumber")?: -1)
 
@@ -89,8 +101,59 @@ class PageFragment : Fragment() {
         }
 
         viewLifecycleOwner.lifecycleScope.launch {
-            pageViewModel.combinedText.collect { combinedText ->
-                binding.pageTextView.text = combinedText
+            pageViewModel.ayahs.collect { ayahWordsByAyahNumber ->
+                val ayahContainer = binding.ayahContainer
+
+                for ((ayahNumber, ayahWords) in ayahWordsByAyahNumber) {
+                    val ayahFlexboxLayout = FlexboxLayout(requireContext()).apply {
+                        flexDirection = FlexDirection.ROW
+                        layoutDirection = View.LAYOUT_DIRECTION_RTL
+                        flexWrap = FlexWrap.WRAP
+                        layoutParams = LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT
+                        )
+                        setPadding(16, 8, 16, 8)
+                    }
+
+                    for (ayahWord in ayahWords) {
+                        val wordTextView = TextView(requireContext()).apply {
+                            text = ayahWord.wordText
+                            textSize = 40f
+                            setPadding(8, 8, 8, 8)
+                            setTypeface(ResourcesCompat.getFont(context, R.font.qpc_hafs_font), Typeface.NORMAL)
+                            setTextColor(Color.BLACK)
+                            isSingleLine = true
+
+                            val gestureDetector = GestureDetector(context, WordGestureListener({
+                                // Swipe left
+                                // Play until end of surah starting from this word
+                            }, {
+                                // Click
+                                // Play this word
+                            }))
+
+                            setOnTouchListener { _, event ->
+                                gestureDetector.onTouchEvent(event)
+                                true
+                            }
+                        }
+
+                        ayahFlexboxLayout.addView(wordTextView)
+                    }
+
+                    val ayahNumberTextView = TextView(requireContext()).apply {
+                        text = "($ayahNumber)"
+                        textSize = 40f
+                        setPadding(8, 8, 8, 8)
+                        setTypeface(ResourcesCompat.getFont(context, R.font.qpc_hafs_font), Typeface.NORMAL)
+                        setTextColor(Color.BLACK)
+                        isSingleLine = true
+                    }
+
+                    ayahFlexboxLayout.addView(ayahNumberTextView)
+                    ayahContainer.addView(ayahFlexboxLayout)
+                }
             }
         }
 

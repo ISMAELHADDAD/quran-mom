@@ -14,14 +14,15 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.asLiveData
 import com.ismaelhaddad.quranmom.databinding.ActivityMainBinding
 import com.ismaelhaddad.quranmom.model.Surah
-import com.ismaelhaddad.quranmom.service.DatabaseService
+import com.ismaelhaddad.quranmom.database.DatabaseManager
 import com.ismaelhaddad.quranmom.ui.page.PageFragment
 
 // Total time: 16h
 // DONE: Check if the audio are there. If not, download it. (3h)
 // DONE: Drawer: Dropdown for reciters (2h)
 // DONE: Drawer: List surahs (1h)
-// TODO: Page fragment: List ayahs + font (3h)
+// DONE: Drawer: Save current surah to preference (0.5h)
+// DONE: Page fragment: List ayahs + font (3h)
 // TODO: Page fragment: Add player (show fab for play/stopping) (3h)
 // TODO: Page fragment: Highlight word played (2h)
 // TODO: Page fragment: Tap word to play only that word (1h)
@@ -30,6 +31,7 @@ import com.ismaelhaddad.quranmom.ui.page.PageFragment
 const val QURANMOM_PREFERENCES = "QuranMomPreferences"
 const val QURANMOM_PREFERENCES_IS_FIRST_TIME = "isFirstTime"
 const val QURANMOM_PREFERRED_RECITER_ID = "preferredReciterId"
+const val QURANMOM_SAVED_SURAH_NUMBER = "savedSurahNumber"
 const val QURANMOM_AUDIO_DIR = "audio"
 
 class MainActivity : AppCompatActivity() {
@@ -48,8 +50,8 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        val databaseService = DatabaseService.getDatabase(applicationContext)
-        mainActivityViewModel = ViewModelProvider(this, MainActivityViewModel.Factory(databaseService))[MainActivityViewModel::class.java]
+        val database = DatabaseManager.getDatabase(applicationContext)
+        mainActivityViewModel = ViewModelProvider(this, MainActivityViewModel.Factory(database))[MainActivityViewModel::class.java]
 
         val sharedPreferences = applicationContext.getSharedPreferences(QURANMOM_PREFERENCES, Context.MODE_PRIVATE)
         val isFirstTime = sharedPreferences.getBoolean(QURANMOM_PREFERENCES_IS_FIRST_TIME, true)
@@ -86,7 +88,7 @@ class MainActivity : AppCompatActivity() {
 
         mainActivityViewModel.surahs.asLiveData().observe(this) { surahs: List<Surah> ->
             menu.clear()
-            surahs.forEach { surah ->
+            surahs.reversed().forEach { surah ->
                 menu.add(0, surah.number, Menu.NONE, "${surah.number}. ${surah.name}").setOnMenuItemClickListener {
                     val fragment = PageFragment.newInstance(surah.number)
                     supportFragmentManager.beginTransaction()
@@ -94,17 +96,22 @@ class MainActivity : AppCompatActivity() {
                         .commit()
                     supportActionBar?.title = "${surah.number}. ${surah.name}"
                     binding.drawerLayout.closeDrawer(GravityCompat.START)
+                    sharedPreferences.edit()
+                        .putInt(QURANMOM_SAVED_SURAH_NUMBER, surah.number)
+                        .apply()
                     true
                 }
             }
 
-            // Set last surah as first page
+            // Set last saved surah or last surah as first page
             val lastSurah = surahs.last()
-            val fragment = PageFragment.newInstance(lastSurah.number)
+            val bookmarkedSurahNumber = sharedPreferences.getInt(QURANMOM_SAVED_SURAH_NUMBER, lastSurah.number)
+            val bookmarkedSurah = surahs.find { it.number == bookmarkedSurahNumber }
+            val fragment = PageFragment.newInstance(bookmarkedSurahNumber)
             supportFragmentManager.beginTransaction()
                 .replace(R.id.fragment_container, fragment)
                 .commit()
-            supportActionBar?.title = "${lastSurah.number}. ${lastSurah.name}"
+            supportActionBar?.title = "${bookmarkedSurah?.number}. ${bookmarkedSurah?.name}"
         }
     }
 

@@ -1,4 +1,4 @@
-package com.ismaelhaddad.quranmom.service
+package com.ismaelhaddad.quranmom.database
 
 import androidx.room.Database
 import androidx.room.RoomDatabase

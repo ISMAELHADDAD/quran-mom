@@ -1,4 +1,4 @@
-package com.ismaelhaddad.quranmom.service
+package com.ismaelhaddad.quranmom.database
 
 import android.content.Context
 import android.util.Log
@@ -7,7 +7,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 
-object DatabaseService {
+object DatabaseManager {
     @Volatile
     private var INSTANCE: AppDatabase? = null
 

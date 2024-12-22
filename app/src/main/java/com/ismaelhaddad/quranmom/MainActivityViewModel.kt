@@ -6,7 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.ismaelhaddad.quranmom.model.Surah
-import com.ismaelhaddad.quranmom.service.AppDatabase
+import com.ismaelhaddad.quranmom.database.AppDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
