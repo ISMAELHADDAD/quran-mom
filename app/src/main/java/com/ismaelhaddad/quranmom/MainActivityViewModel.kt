@@ -54,7 +54,7 @@ class MainActivityViewModel(private val database: AppDatabase) : ViewModel() {
     private fun downloadAudio(context: Context, url: String, pathFile: String): String? {
         return try {
             // Define the target file path in internal storage
-            val targetFile = File(context.filesDir, "$QURANMOM_AUDIO_DIR$pathFile")
+            val targetFile = File(context.dataDir, "$QURANMOM_AUDIO_DIR$pathFile")
 
             // Ensure the parent directory exists
             targetFile.parentFile?.mkdirs()

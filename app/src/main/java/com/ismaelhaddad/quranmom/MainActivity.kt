@@ -23,10 +23,10 @@ import com.ismaelhaddad.quranmom.ui.page.PageFragment
 // DONE: Drawer: List surahs (1h)
 // DONE: Drawer: Save current surah to preference (0.5h)
 // DONE: Page fragment: List ayahs + font (3h)
-// TODO: Page fragment: Add player (show fab for play/stopping) (3h)
+// DONE: Page fragment: Add player (show fab for play/stopping) (3h)
 // TODO: Page fragment: Highlight word played (2h)
-// TODO: Page fragment: Tap word to play only that word (1h)
-// TODO: Page fragment: Swipe left for continuous playing starting from that word (1h)
+// DONE: Page fragment: Tap word to play only that word (1h)
+// DONE: Page fragment: Swipe left for continuous playing starting from that word (1h)
 
 const val QURANMOM_PREFERENCES = "QuranMomPreferences"
 const val QURANMOM_PREFERENCES_IS_FIRST_TIME = "isFirstTime"

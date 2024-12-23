@@ -16,7 +16,6 @@ import android.widget.PopupMenu
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.res.ResourcesCompat
-import androidx.core.view.marginBottom
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
@@ -48,7 +47,15 @@ class PageFragment : Fragment() {
         val root: View = binding.root
 
         val database = DatabaseManager.getDatabase(requireContext().applicationContext)
-        pageViewModel = ViewModelProvider(this, PageViewModel.Factory(database))[PageViewModel::class.java]
+        pageViewModel = ViewModelProvider(this, PageViewModel.Factory(requireActivity().application,database))[PageViewModel::class.java]
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            pageViewModel.audioFilePath.collect { path ->
+                path?.let {
+                    Toast.makeText(context, "Loaded file path: $it", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
 
         pageViewModel.setSelectedSurahNumber(arguments?.getInt("surahNumber")?: -1)
 
@@ -103,6 +110,7 @@ class PageFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             pageViewModel.ayahs.collect { ayahWordsByAyahNumber ->
                 val ayahContainer = binding.ayahContainer
+                ayahContainer.removeAllViews()
 
                 for ((ayahNumber, ayahWords) in ayahWordsByAyahNumber) {
                     val ayahFlexboxLayout = FlexboxLayout(requireContext()).apply {
@@ -128,9 +136,11 @@ class PageFragment : Fragment() {
                             val gestureDetector = GestureDetector(context, WordGestureListener({
                                 // Swipe left
                                 // Play until end of surah starting from this word
+                                pageViewModel.playFrom(ayahWord.segmentStart)
                             }, {
                                 // Click
                                 // Play this word
+                                pageViewModel.playSegment(ayahWord.segmentStart, ayahWord.segmentEnd)
                             }))
 
                             setOnTouchListener { _, event ->

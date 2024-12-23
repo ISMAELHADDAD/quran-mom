@@ -64,4 +64,7 @@ dependencies {
     implementation(libs.androidx.room.guava)
     implementation(libs.androidx.room.paging)
     implementation(libs.flexbox)
+    implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.ui)
+
 }

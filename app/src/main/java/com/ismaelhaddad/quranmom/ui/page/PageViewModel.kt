@@ -1,28 +1,112 @@
 package com.ismaelhaddad.quranmom.ui.page
 
+import android.app.Application
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import com.ismaelhaddad.quranmom.model.AyahWord
+import androidx.lifecycle.viewModelScope
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.exoplayer.ExoPlayer
 import com.ismaelhaddad.quranmom.model.Reciter
 import com.ismaelhaddad.quranmom.database.AppDatabase
+import com.ismaelhaddad.quranmom.model.AyahWordWithSegment
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.launch
+import java.io.File
 
-class PageViewModel(private val database: AppDatabase) : ViewModel() {
+class PageViewModel(private val application: Application, private val database: AppDatabase) : ViewModel() {
 
     private val _selectedSurahNumber = MutableStateFlow(-1)
     private val _selectedReciter = MutableStateFlow<Reciter?>(null)
+    private val _playbackState = MutableStateFlow(Player.STATE_IDLE)
+    private val _player = ExoPlayer.Builder(application).build()
 
     private val selectedSurahNumber: StateFlow<Int> = _selectedSurahNumber
     val selectedReciter: StateFlow<Reciter?> = _selectedReciter
+    val playbackState: StateFlow<Int> = _playbackState
+    val player: ExoPlayer
+        get() = _player
 
     val reciters: Flow<List<Reciter>> = database.reciterDao().getAll()
+
     @OptIn(ExperimentalCoroutinesApi::class)
-    val ayahs: Flow<Map<Int, List<AyahWord>>> = selectedSurahNumber.flatMapLatest { surahNumber ->
-        database.surahDao().getAyahs(surahNumber)
+    val ayahs: Flow<Map<Int, List<AyahWordWithSegment>>> = combine(
+        selectedSurahNumber,
+        selectedReciter
+    ) { surahNumber, reciter ->
+        flow {
+            if (surahNumber != -1 && reciter != null) {
+                emit(
+                    database.surahDao().getAyahs(surahNumber, reciter.id).first()
+                )
+            } else {
+                emit(emptyMap())
+            }
+        }
+    }.flatMapLatest { it }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val audioFilePath: Flow<String?> = combine(
+        selectedSurahNumber,
+        selectedReciter
+    ) { surahNumber, reciter ->
+        flow {
+            if (surahNumber != -1 && reciter != null) {
+                emit(
+                    database.surahAudioDao().getSurahAudioPathFileByReciterId(surahNumber, reciter.id).first()
+                )
+            } else {
+                emit(null)
+            }
+        }
+    }.flatMapLatest { it }
+
+    init {
+        _player.addListener(object : Player.Listener {
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                _playbackState.value = playbackState
+            }
+        })
+
+        viewModelScope.launch {
+            audioFilePath.collect { path ->
+                if (path != null) {
+                    loadAudioFile(path)
+                }
+            }
+        }
+    }
+
+    private fun loadAudioFile(filePath: String) {
+        val file = File(application.dataDir, "audio$filePath")
+        val mediaItem = MediaItem.Builder()
+            .setUri(Uri.fromFile(file))
+            .build()
+        _player.setMediaItem(mediaItem)
+        _player.prepare()
+    }
+
+    fun playSegment(startMs: Long, endMs: Long) {
+        _player.seekTo(startMs)
+        _player.play()
+        viewModelScope.launch {
+            delay(endMs - startMs)
+            _player.pause()
+        }
+    }
+
+    fun playFrom(startMs: Long) {
+        _player.seekTo(startMs)
+        _player.play()
     }
 
     fun setSelectedSurahNumber(surahNumber: Int) {
@@ -33,11 +117,16 @@ class PageViewModel(private val database: AppDatabase) : ViewModel() {
         _selectedReciter.value = reciter
     }
 
-    class Factory(private val database: AppDatabase) : ViewModelProvider.Factory {
+    override fun onCleared() {
+        super.onCleared()
+        _player.release()
+    }
+
+    class Factory(private val application: Application, private val database: AppDatabase) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(PageViewModel::class.java)) {
-                return PageViewModel(database) as T
+                return PageViewModel(application, database) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }
