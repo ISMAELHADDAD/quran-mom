@@ -14,8 +14,9 @@ import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.PopupMenu
 import android.widget.TextView
-import android.widget.Toast
 import androidx.core.content.res.ResourcesCompat
+import androidx.core.view.children
+import androidx.core.view.size
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
@@ -49,15 +50,7 @@ class PageFragment : Fragment() {
         val database = DatabaseManager.getDatabase(requireContext().applicationContext)
         pageViewModel = ViewModelProvider(this, PageViewModel.Factory(requireActivity().application,database))[PageViewModel::class.java]
 
-        viewLifecycleOwner.lifecycleScope.launch {
-            pageViewModel.audioFilePath.collect { path ->
-                path?.let {
-                    Toast.makeText(context, "Loaded file path: $it", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
-
-        pageViewModel.setSelectedSurahNumber(arguments?.getInt("surahNumber")?: -1)
+        pageViewModel.setSelectedSurahNumber(arguments?.getInt("surahNumber")?: 114)
 
         val reciterButton = requireActivity().findViewById<ImageButton>(R.id.reciter_button)
         val reciterPopupMenu = PopupMenu(requireContext(), reciterButton)
@@ -68,7 +61,7 @@ class PageFragment : Fragment() {
                 currentReciters = reciters
 
                 val sharedPreferences = requireContext().applicationContext.getSharedPreferences(QURANMOM_PREFERENCES, Context.MODE_PRIVATE)
-                val preferredReciterId = sharedPreferences.getInt(QURANMOM_PREFERRED_RECITER_ID, -1)
+                val preferredReciterId = sharedPreferences.getInt(QURANMOM_PREFERRED_RECITER_ID, 1)
                 val preferredReciter = reciters.find { it.id == preferredReciterId}
                 if (preferredReciter != null) {
                     pageViewModel.setSelectedReciter(preferredReciter)
@@ -100,14 +93,6 @@ class PageFragment : Fragment() {
         }
 
         viewLifecycleOwner.lifecycleScope.launch {
-            pageViewModel.selectedReciter.collect { reciter ->
-                reciter?.let {
-                    Toast.makeText(context, "Reciter: ${reciter.name}", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
-
-        viewLifecycleOwner.lifecycleScope.launch {
             pageViewModel.ayahs.collect { ayahWordsByAyahNumber ->
                 val ayahContainer = binding.ayahContainer
                 ayahContainer.removeAllViews()
@@ -129,9 +114,11 @@ class PageFragment : Fragment() {
                             text = ayahWord.wordText
                             textSize = 40f
                             setPadding(8, 8, 8, 8)
-                            setTypeface(ResourcesCompat.getFont(context, R.font.qpc_hafs_font), Typeface.NORMAL)
+                            setTypeface(ResourcesCompat.getFont(context, R.font.qpc_hafs_font_modified), Typeface.NORMAL)
+                            textDirection = View.TEXT_DIRECTION_RTL
                             setTextColor(Color.BLACK)
                             isSingleLine = true
+                            contentDescription = "${ayahWord.id}" // Used for word highlighting
 
                             val gestureDetector = GestureDetector(context, WordGestureListener({
                                 // Swipe left
@@ -163,6 +150,21 @@ class PageFragment : Fragment() {
 
                     ayahFlexboxLayout.addView(ayahNumberTextView)
                     ayahContainer.addView(ayahFlexboxLayout)
+                }
+            }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            pageViewModel.currentWord.collect { word ->
+                if (binding.ayahContainer.size > 0) {
+                    val ayahWordTextViews = (binding.ayahContainer.children.flatMap { (it as FlexboxLayout).children }) as Sequence<TextView>
+                    ayahWordTextViews.forEach { textView ->
+                        if (textView.contentDescription == "${word?.id}") {
+                            textView.setTextColor(Color.BLUE) // Highlight color
+                        } else {
+                            textView.setTextColor(Color.BLACK) // Default color
+                        }
+                    }
                 }
             }
         }

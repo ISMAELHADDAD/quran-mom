@@ -24,7 +24,7 @@ import com.ismaelhaddad.quranmom.ui.page.PageFragment
 // DONE: Drawer: Save current surah to preference (0.5h)
 // DONE: Page fragment: List ayahs + font (3h)
 // DONE: Page fragment: Add player (show fab for play/stopping) (3h)
-// TODO: Page fragment: Highlight word played (2h)
+// DONE: Page fragment: Highlight word played (2h)
 // DONE: Page fragment: Tap word to play only that word (1h)
 // DONE: Page fragment: Swipe left for continuous playing starting from that word (1h)
 

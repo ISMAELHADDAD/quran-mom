@@ -11,7 +11,7 @@ interface SurahDao {
     fun getAll(): Flow<List<Surah>>
 
     @Query("""
-        SELECT aw.ayah_number, aw.word_order, aw.word_text, aws.segment_start, aws.segment_end
+        SELECT aws.id, aw.ayah_number, aw.word_order, aw.word_text, aws.segment_start, aws.segment_end
         FROM surah_audio sa
         INNER JOIN ayah_word aw ON sa.surah_number = aw.surah_number
         LEFT JOIN ayah_word_segment aws ON aw.id = aws.ayah_word_id AND aws.surah_audio_id = sa.id 

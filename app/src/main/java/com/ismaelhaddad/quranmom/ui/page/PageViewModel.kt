@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.common.Timeline
 import androidx.media3.exoplayer.ExoPlayer
 import com.ismaelhaddad.quranmom.model.Reciter
 import com.ismaelhaddad.quranmom.database.AppDatabase
@@ -27,14 +28,18 @@ class PageViewModel(private val application: Application, private val database: 
 
     private val _selectedSurahNumber = MutableStateFlow(-1)
     private val _selectedReciter = MutableStateFlow<Reciter?>(null)
-    private val _playbackState = MutableStateFlow(Player.STATE_IDLE)
+    private val _currentWord = MutableStateFlow<AyahWordWithSegment?>(null)
     private val _player = ExoPlayer.Builder(application).build()
 
     private val selectedSurahNumber: StateFlow<Int> = _selectedSurahNumber
     val selectedReciter: StateFlow<Reciter?> = _selectedReciter
-    val playbackState: StateFlow<Int> = _playbackState
-    val player: ExoPlayer
+    val currentWord: StateFlow<AyahWordWithSegment?> = _currentWord
+    private val player: ExoPlayer
         get() = _player
+
+    private val wordHighlighter = WordHighlighter(player) { highlightedWord ->
+        _currentWord.value = highlightedWord
+    }
 
     val reciters: Flow<List<Reciter>> = database.reciterDao().getAll()
 
@@ -71,17 +76,17 @@ class PageViewModel(private val application: Application, private val database: 
     }.flatMapLatest { it }
 
     init {
-        _player.addListener(object : Player.Listener {
-            override fun onPlaybackStateChanged(playbackState: Int) {
-                _playbackState.value = playbackState
-            }
-        })
-
         viewModelScope.launch {
             audioFilePath.collect { path ->
                 if (path != null) {
                     loadAudioFile(path)
                 }
+            }
+        }
+
+        viewModelScope.launch {
+            ayahs.collect {
+                wordHighlighter.setWordSegments(it.flatMap { ayah -> ayah.value })
             }
         }
     }
@@ -118,8 +123,9 @@ class PageViewModel(private val application: Application, private val database: 
     }
 
     override fun onCleared() {
-        super.onCleared()
+        wordHighlighter.release()
         _player.release()
+        super.onCleared()
     }
 
     class Factory(private val application: Application, private val database: AppDatabase) : ViewModelProvider.Factory {
