@@ -14,6 +14,7 @@ import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.PopupMenu
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.children
 import androidx.core.view.size
@@ -109,6 +110,16 @@ class PageFragment : Fragment() {
                         setPadding(16, 8, 16, 8)
                     }
 
+                    val ayahNumberTextView = TextView(requireContext()).apply {
+                        text = "($ayahNumber)"
+                        textSize = 13f
+                        setPadding(8, 8, 8, 8)
+                        setTextColor(Color.BLACK)
+                        isSingleLine = true
+                    }
+
+                    ayahFlexboxLayout.addView(ayahNumberTextView)
+
                     for (ayahWord in ayahWords) {
                         val wordTextView = TextView(requireContext()).apply {
                             text = ayahWord.wordText
@@ -139,20 +150,12 @@ class PageFragment : Fragment() {
                         ayahFlexboxLayout.addView(wordTextView)
                     }
 
-                    val ayahNumberTextView = TextView(requireContext()).apply {
-                        text = "($ayahNumber)"
-                        textSize = 40f
-                        setPadding(8, 8, 8, 8)
-                        setTypeface(ResourcesCompat.getFont(context, R.font.qpc_hafs_font), Typeface.NORMAL)
-                        setTextColor(Color.BLACK)
-                        isSingleLine = true
-                    }
-
-                    ayahFlexboxLayout.addView(ayahNumberTextView)
                     ayahContainer.addView(ayahFlexboxLayout)
                 }
             }
         }
+
+        val highlightWordColor = ContextCompat.getColor(requireContext(), R.color.cornflower_blue)
 
         viewLifecycleOwner.lifecycleScope.launch {
             pageViewModel.currentWord.collect { word ->
@@ -160,7 +163,7 @@ class PageFragment : Fragment() {
                     val ayahWordTextViews = (binding.ayahContainer.children.flatMap { (it as FlexboxLayout).children }) as Sequence<TextView>
                     ayahWordTextViews.forEach { textView ->
                         if (textView.contentDescription == "${word?.id}") {
-                            textView.setTextColor(Color.BLUE) // Highlight color
+                            textView.setTextColor(highlightWordColor) // Highlight color
                         } else {
                             textView.setTextColor(Color.BLACK) // Default color
                         }
